@@ -1,0 +1,14 @@
+# Local build/runtime artifacts
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Generated data & outputs (regenerated from SOURCE PDFs)
+data/
+output/
+*.apkg
+
+# Keep SOURCE PDFs out of version control
+SOURCE/*.pdf

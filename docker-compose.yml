@@ -1,0 +1,27 @@
+# Each subject = its own compose project (set COMPOSE_PROJECT_NAME in .env).
+# Compose prefixes volumes/network with the project name -> subjects stay isolated.
+# Ollama is NOT containerized: the app talks to the Ollama already running on the
+# host (default qwen3-coder:30b + nomic-embed-text).
+
+services:
+  app:
+    build: .
+    environment:
+      # Reach the host's Ollama from inside the container.
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./SOURCE:/app/SOURCE:ro
+      - ./output:/app/output
+      - ./data:/app/data
+    networks:
+      - net
+    # Override the command at runtime, e.g. `docker compose run --rm app topicmap`.
+
+networks:
+  net:
+    driver: bridge
+

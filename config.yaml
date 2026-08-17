@@ -1,0 +1,40 @@
+# Subject/domain config — change these to reuse the toolkit for ANY subject.
+domain: "System Design"
+goal: "Master system design end-to-end and be ready for architect-level interviews."
+# project slug drives COMPOSE_PROJECT_NAME so each subject is isolated.
+project: "system_design"
+
+paths:
+  source: "SOURCE"
+  data: "data"
+  output: "output"
+  extracted: "data/extracted"
+  chroma: "data/chroma"
+  manifest: "data/manifest.json"
+  progress: "progress.yaml"
+
+llm:
+  # Cloud model used ONLY for the heavy consolidated-notes synthesis.
+  cloud:
+    provider: "openai"        # openai | anthropic
+    model: "gpt-4o"
+    api_key_env: "OPENAI_API_KEY"
+    max_tokens: 4096
+  # Local Ollama used for everything else (topic map, questions, cards, tutor, embeddings).
+  local:
+    host_env: "OLLAMA_HOST"
+    default_host: "http://localhost:11434"
+    gen_model: "qwen3-coder:30b"
+    embed_model: "nomic-embed-text"
+
+chunking:
+  max_chars: 6000
+  overlap: 400
+
+index:
+  collection: "chapters"
+  top_k: 6
+
+# Passages pulled per book when consolidating a concept note.
+consolidation:
+  passages_per_book: 4
