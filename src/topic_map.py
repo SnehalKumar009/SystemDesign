@@ -20,10 +20,13 @@ _SYSTEM = (
 _PROMPT = """\
 Goal: {goal}
 
-Below are chapters from several books about {domain}. Build a consolidated concept map.
+Below are chapters from several books about {domain}. Each chapter includes a short
+excerpt of its opening text to help you judge what it actually covers. Build a
+consolidated concept map.
 
 Rules:
-- Produce 15-40 canonical concepts covering the material (merge duplicates across books).
+- Produce 25-40 canonical concepts covering the material (merge duplicates across books).
+- Prefer breadth: surface distinct concepts from every book, not just the most common ones.
 - For each concept, list which book+chapter(s) teach it (only ones that actually do).
 - Give an ordered "prereqs" list (names of other concepts that should be learned first).
 - Order concepts foundational -> advanced.
@@ -41,12 +44,21 @@ Return JSON:
 """
 
 
+def _snippet(text: str, max_chars: int = 500) -> str:
+    """Collapse whitespace and return the first ``max_chars`` of chapter text."""
+    snippet = " ".join((text or "").split())[:max_chars]
+    return snippet + "..." if len(snippet) == max_chars else snippet
+
+
 def _chapters_blob(books: list[dict]) -> str:
     lines = []
     for b in books:
         lines.append(f"# Book: {b['book']}")
         for ch in b["chapters"]:
             lines.append(f"  - {ch['title']}")
+            snippet = _snippet(ch.get("text", ""))
+            if snippet:
+                lines.append(f"      excerpt: {snippet}")
     return "\n".join(lines)
 
 
