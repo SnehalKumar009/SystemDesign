@@ -32,14 +32,18 @@ def _chapters_from_toc(doc: "fitz.Document") -> list[dict]:
     tops = [(t, p) for lvl, t, p in toc if lvl == 1 and p >= 1]
     if len(tops) < 2:
         return []
+    # Sub-headings (TOC levels 2-3) expose per-chapter sub-topics to the topic map.
+    subs = [(t, p) for lvl, t, p in toc if lvl in (2, 3) and p >= 1]
     chapters = []
     for i, (title, start) in enumerate(tops):
         end = tops[i + 1][1] - 1 if i + 1 < len(tops) else doc.page_count
         start_idx = max(0, start - 1)
         text = "\n".join(doc[p].get_text() for p in range(start_idx, min(end, doc.page_count)))
+        sections = [t.strip() for t, p in subs if start <= p <= end]
         chapters.append({
             "index": i + 1,
             "title": title.strip(),
+            "sections": sections,
             "text": text,
             "page_start": start,
             "page_end": end,
@@ -64,6 +68,7 @@ def _chapters_from_headings(doc: "fitz.Document") -> list[dict]:
         chapters.append({
             "index": i + 1,
             "title": title,
+            "sections": [],
             "text": text,
             "page_start": pstart + 1,
             "page_end": pend,
@@ -79,6 +84,7 @@ def _fixed_windows(doc: "fitz.Document", pages_per: int = 20) -> list[dict]:
         chapters.append({
             "index": i + 1,
             "title": f"Section {i + 1} (pp. {start + 1}-{end})",
+            "sections": [],
             "text": text,
             "page_start": start + 1,
             "page_end": end,
@@ -117,6 +123,7 @@ def run(force: bool = False, cfg: Config | None = None) -> None:
         data = extract_pdf(pdf)
         save_json(out_dir / f"{data['slug']}.json", data)
         manifest.mark_extracted(pdf)
-        console.print(f"  -> {len(data['chapters'])} chapters")
+        n_sections = sum(len(ch.get("sections", [])) for ch in data["chapters"])
+        console.print(f"  -> {len(data['chapters'])} chapters, {n_sections} sections")
 
     manifest.save()

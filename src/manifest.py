@@ -65,6 +65,13 @@ class Manifest:
     def mark(self, slug: str, stage: str) -> None:
         self.data["concepts"].setdefault(slug, {})[stage] = True
 
+    def prune_concepts(self, valid_slugs: set[str]) -> list[str]:
+        """Drop concept records whose slug is no longer in the map. Returns removed slugs."""
+        stale = [s for s in self.data["concepts"] if s not in valid_slugs]
+        for s in stale:
+            del self.data["concepts"][s]
+        return stale
+
     def invalidate_concepts_for_books(self, changed_books: set[str]) -> None:
         for rec in self.data["concepts"].values():
             if changed_books.intersection(rec.get("books", [])):

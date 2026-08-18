@@ -39,6 +39,19 @@ def seed(concepts: list[dict], cfg: Config | None = None) -> None:
     _save(cfg, data)
 
 
+def prune(names: list[str], cfg: Config | None = None) -> list[str]:
+    """Drop mastery scores for concepts no longer in the map. Returns removed names."""
+    cfg = cfg or load_config()
+    data = _load(cfg)
+    scores = data.get("scores", {})
+    valid = set(names)
+    stale = [n for n in scores if n not in valid]
+    for n in stale:
+        del scores[n]
+    _save(cfg, data)
+    return stale
+
+
 def set_score(name: str, score: int, cfg: Config | None = None) -> None:
     cfg = cfg or load_config()
     score = max(0, min(6, score))

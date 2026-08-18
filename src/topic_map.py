@@ -20,13 +20,17 @@ _SYSTEM = (
 _PROMPT = """\
 Goal: {goal}
 
-Below are chapters from several books about {domain}. Each chapter includes a short
-excerpt of its opening text to help you judge what it actually covers. Build a
-consolidated concept map.
+Below are chapters from several books about {domain}. Each chapter lists its
+sub-section headings and a short opening excerpt so you can see the sub-topics it
+covers. Build a consolidated, GRANULAR concept map.
 
 Rules:
-- Produce 25-40 canonical concepts covering the material (merge duplicates across books).
-- Prefer breadth: surface distinct concepts from every book, not just the most common ones.
+- Produce 35-50 canonical concepts. Favor granularity: treat distinct sub-topics as
+  separate concepts (e.g. replication, partitioning, and transactions/isolation are
+  three separate concepts, not one "data storage" concept).
+- Use the per-chapter "sections" as candidate concepts; promote meaningful sub-topics
+  into their own concept rather than folding them into a broad umbrella.
+- Merge only TRUE duplicates across books; never collapse genuinely distinct sub-topics.
 - For each concept, list which book+chapter(s) teach it (only ones that actually do).
 - Give an ordered "prereqs" list (names of other concepts that should be learned first).
 - Order concepts foundational -> advanced.
@@ -56,6 +60,9 @@ def _chapters_blob(books: list[dict]) -> str:
         lines.append(f"# Book: {b['book']}")
         for ch in b["chapters"]:
             lines.append(f"  - {ch['title']}")
+            sections = ch.get("sections") or []
+            if sections:
+                lines.append("      sections: " + "; ".join(sections))
             snippet = _snippet(ch.get("text", ""))
             if snippet:
                 lines.append(f"      excerpt: {snippet}")
@@ -88,10 +95,32 @@ def run(force: bool = False, cfg: Config | None = None) -> None:
     for c in concepts:
         book_names = sorted({s["book"] for s in c.get("sources", [])})
         manifest.set_concept_sources(c["slug"], book_names)
+
+    # Drop artifacts for concepts that no longer exist in the regenerated map.
+    valid_slugs = {c["slug"] for c in concepts}
+    manifest.prune_concepts(valid_slugs)
     manifest.save()
+    _prune_stale_files(cfg, valid_slugs)
+    progress_mod.prune([c["name"] for c in concepts], cfg)
 
     progress_mod.seed(concepts, cfg)
     console.print(f"[green]{len(concepts)} concepts mapped -> output/topic_map.md[/]")
+
+
+def _prune_stale_files(cfg: Config, valid_slugs: set[str]) -> None:
+    """Remove per-concept output files whose slug is no longer in the map."""
+    targets = [
+        (cfg.path("output") / "notes", "*.md"),
+        (cfg.path("output") / "questions", "*.md"),
+        (cfg.path("data") / "cards", "*.json"),
+    ]
+    for directory, pattern in targets:
+        if not directory.exists():
+            continue
+        for path in directory.glob(pattern):
+            if path.stem not in valid_slugs:
+                path.unlink()
+                console.print(f"[yellow]pruned stale {path.relative_to(cfg.path('output').parent)}[/]")
 
 
 def _write_md(path, cfg: Config, concepts: list[dict]) -> None:
